@@ -1,0 +1,403 @@
+clc
+% Algoritma PBFS-2M  (Penjadwalan Batch Flow Shop 2 Mesin)
+% Langkah 0. input parameter: n,d,t_m,s_m   Lanjutkan ke Langkah 1.
+% Langkah 1.pilih mesin sibuk (K) 
+% 	Langkah 1.1.Hitung Output mesin 1 dan Mesin 2 dengan Persamaan (22) dan (23)	
+% 	Langkah 2.1.Pilih mesin bottleneck berdasarkan Definisi 1
+%	Lanjutkan ke Langkah 2
+% Langkah 2.Hitung N_max dengan Persamaan (33). Lanjutkan ke Langkah 3
+% Langkah 3.Gunakan Persamaan (34) untuk menghitung N^0.
+%	Langkah 3.1.Jika N^0≤1 maka tetapkan N=1	
+%	Langkah 3.1.Jika N^0≥N_max maka tetapkan 〖N=N〗_max
+%	Langkah 3.1.Jika 〖1<N〗^0<N_max maka tetapkan N=N^0	
+%	lanjutkan ke Langkah 4.
+% Langkah 4.Gunakan N pada Langkah 3 untuk menghitung Q_[i] ,i=N,…,1 menggunakan Persamaan (32);  
+%	dan berdasarkan Pembatas (8) lakukan eliminasi untuk nilai  Q_[i] =0. Lanjutkan ke Langkah 5
+% Langkah 5.Hitung kembali N berdasarkan banyak nya nilai Q_[i]  yang diperoleh. Lanjutkan ke Langkah 6.
+% Langkah 6.Berdasarkan Proposisi 1, jadwalkan batch pada mesin flowshop menggunakan pendekatan penjadwalan mundur 
+%		dengan menempatkan ukuran batch terbesar pada indek urutan ke-[1] diikuti dengan batch yang lebih kecil 
+%		pada urutan berikutnya sampai indek ke-[N]. 
+%		Lanjutkan ke Langkah 7.
+% Langkah 7.Hitung total waktu tinggal aktual 
+%	Langkah 7.1.Hitung C_[i] ,i=1,…,N  Batch dengan Persamaan (3)
+%	Langkah 7.2.Hitung B_[i] ,i=1,…,N  Batch dengan Persamaan (2)
+%	Langkah 7.3.Hitung F^a dengan Persamaan (1).	
+% 	Selesai ∎
+
+%================================================================;
+
+M=1*10^50;
+W=0;
+% Langkah 0. input parameter: n,d,t_m,s_m   Lanjutkan ke Langkah 1.
+%disp('==============================================================')	;
+m=2;
+sam=100;
+
+% random n
+a = 12;
+b = 60;
+hn = ceil((b-a).*rand(sam+10,1) + a)';
+
+% random d
+a = 5*b;
+b = 10*b;
+hd=ceil((b-a).*rand(sam+10,1) + a)';
+
+% random t
+a = 1;
+b = 2;
+ht =((b-a).*rand(sam+10,1) + a)';
+
+% random s
+a = 0.2;
+b = 0.5;
+hs = ((b-a).*rand(sam+10,1) + a)';
+
+
+RR=[];
+for p=1:sam
+	n=hn(1,p);
+	d=hd(1,p);
+	t=[ht(1,p) ht(1,p+1)];
+	s=[hs(1,p) hs(1,p+1)];
+
+
+%s=[4.95 4.31]
+%t=[1.67 1.54]
+%d=541
+%n=21
+
+%s=[4 6]
+%t=[2 1]
+%d=28
+%n=5
+
+%s =[4.0638    4.7137]
+%t =[1.6195    1.3606]
+%d =520
+%n =36
+
+
+
+Btest=0;
+B=[]; b=d;
+while Btest<0
+	for i=1:m
+ 		j=m+1-i;
+  		Bj=b-t(1,j)*n;
+  		B=[B Bj];
+  		b=Bj;
+	end  
+	Btest=B(:,2);
+	if Btest<=0
+		d=2*d;
+	end
+end
+
+Bs=d;
+	HF1=[];
+	HN1=[];
+	HK1=[];
+
+%disp('==============================================================')	;
+% Langkah 1.pilih mesin sibuk (K) 
+cap=[];
+for m=1:2
+	if m==1
+		capm=((d-s(1,1)-t(1,2))/t(1,1))-1;
+	else
+		capm=(( d- max( s(1,1), (s(1,2)-t(1,1)) )- t(1,1) )/t(1,2))-1;
+	end
+	cap=[cap capm];
+end
+[Cap,Ki]=min(cap);
+
+
+K=Ki;
+
+
+tk=t(1,K);					% waktu proses pada mesin sibuk
+sk=s(1,K);					% waktu setup pada mesin sibuk
+
+if K==1
+	B=0;
+else
+	B=t(1,1);
+end
+B	;		
+Yk=2*B+t(1,K);
+NQi=floor(1/2 + sqrt(1/4 + 2*n*t(1,K)/s(1,K) + 4*n*B/s(1,K)));
+
+% Langkah 2.Hitung N_max dengan Persamaan (33). Lanjutkan ke Langkah 3
+A=(  s(1,K) +      sqrt( s(1,K)^2 + 16*n*s(1,K)*B + 8*n*s(1,K)*t(1,K) ) );
+B=(2*s(1,K));
+NQi=floor(A/B);
+
+
+QNv=(n/NQi)+(sk/(2*Yk))+((NQi*sk)/(2*Yk))-((NQi*sk)/Yk);
+QQ=[];
+for i=1:NQi
+	QNv=(n/NQi)+(sk/(2*Yk))+((NQi*sk)/(2*Yk))-((i*sk)/Yk);
+	QQ=[QQ QNv];
+end
+QQ;
+if QNv<0
+	NQ=NQi-1;
+else
+	NQ=NQi;
+end
+NQ;
+% Langkah 3.Gunakan Persamaan (34) untuk menghitung N^0.
+
+if Ki==1
+	NL=floor((d-t(1,2)-t(1,1)*n)/s(1,1));
+else
+	NL=floor((d-max(s(1,1),s(1,2)-t(1,1))-t(1,1)-t(1,2)*n)/s(1,2));	
+end
+NL;
+
+
+
+if NL<=1
+	N=1;
+elseif NL>=NQ
+	N=NQ;
+else
+	N=NL;
+end
+N;
+Nama=N;
+% Langkah 4.Gunakan N pada Langkah 3 untuk menghitung Q_[i] ,i=N,…,1 menggunakan Persamaan (32);  
+%	dan berdasarkan Pembatas (8) lakukan eliminasi untuk nilai  Q_[i] =0. Lanjutkan ke Langkah 5
+
+for w=1:N
+	w=w;		
+
+	Q=[]; g=n; 
+	for i=1:w
+
+		if W==0
+			w;
+				
+			% batch kontinyu
+			Qi=(n/w)+(sk/(2*Yk))+((w*sk)/(2*Yk))-((i*sk)/Yk);
+			Q=[Q Qi]; 
+
+			if sum(Q)==n | min(Q)<=0
+				break;
+			end	
+		else
+
+			% batch integer
+       			ind=w+1-i  ;    % indek i mulai dari belakang
+			Qind = round((g/(ind))+(sk/(2*Yk))+(((ind)*sk)/(2*Yk))-((ind*sk)/Yk));
+			Q=[Qind Q];
+			Q=nonzeros(Q)';
+			g=n-sum(Q);
+
+		end
+	end
+	Q;		%[write]
+
+	sumQ=sum(Q);
+
+	% Langkah 5.Hitung kembali N berdasarkan banyak nya nilai Q_[i]  yang diperoleh. Lanjutkan ke Langkah 6.
+	N=sum(Q>0);
+
+	% Langkah 6.Berdasarkan Proposisi 1, jadwalkan batch pada mesin flowshop menggunakan pendekatan penjadwalan mundur 
+	%		dengan menempatkan ukuran batch terbesar pada indek urutan ke-[1] diikuti dengan batch yang lebih kecil 
+	%		pada urutan berikutnya sampai indek ke-[N]. 
+	%		Lanjutkan ke Langkah 7.
+
+	if K==2
+		Q=sort(Q,'descend');
+	else
+		%if N==1
+		%	Q=n;
+		%else
+		%	NZ=round(N/2);
+		%	Nsisa=N-NZ;
+		%	Q1=sort(Q,'ascend');
+		%	Q2=Q1(1,1:NZ);
+		%	Q3=Q(1,1:Nsisa);
+		%	Q=[Q2 Q3];	
+		%end
+
+		QA=sort(Q(1,1:N-1),'ascend');
+		QB=Q(1,N);
+		Q=[QA QB];
+
+
+		%Q=sort(Q,'ascend');
+
+	end
+	Q;
+	Nano=numel(Q);
+	
+	% Langkah 7.Hitung total waktu tinggal aktual 
+	%	Langkah 7.1.Hitung C_[i] ,i=1,…,N  Batch dengan Persamaan (3);
+	%	Langkah 7.2.Hitung B_[i] ,i=1,…,N  Batch dengan Persamaan (2);
+	%	Langkah 7.3.Hitung F^a dengan Persamaan (1).	
+	% 	Selesai ∎
+
+	Bx=[];
+	Bjm=[];
+	Fj=d;
+	for i=1:2
+  		k=m+1-i	;	%ukuran batch dengan asterik terbanyak dijadwalkan dekat due date
+
+  		for j=1:N
+			Q=Q;
+      			if k==2 
+         			t(1,k);
+				s(1,k);
+				A=t(1,k)*Q(1,j);
+         			Bj=Fj-A;
+         			Fj=Bj-s(1,k) ;
+      			else
+         			if j==1
+					Bijx=Bx(1,j);
+            				Bj=Bx(1,j)-t(1,k)*Q(1,j);
+         			else
+					Bijx=Bx(1,j);
+					Fjx=Fj;
+					Qijx=Q(1,j);
+					tijk=t(1,1);
+            				Bj=min(Bx(1,j),Fj)-t(1,1)*Q(1,j);
+         			end
+         			Fj=Bj-s(1,k) ;
+      			end  
+			Bjm=[Bjm Bj];
+  		end
+  		Bx=[Bjm; Bx];
+  		Bjm=[];
+	end  
+	Bx;
+	Q;
+
+	C=[] ;
+	B=[]; 
+	F=[];
+	for i=1:N
+		Ci=max( Q(1,1)*t(1,2)+(i-1)*s(1,1)+t(1,1)*sum(Q(1,1:i)), (i-1)*s(1,2)+t(1,2)*sum(Q(1,1:i))+Q(1,i)*t(1,1) );
+		C=[C Ci];
+		Bi=Bx(1,i);
+    		Fi=(d-Bx(1,i))*Q(1,i);
+    		C=[C Ci];
+		B=[B Bi];
+		F=[F Fi];
+	end
+	F;			
+
+	w=w;
+	C=[]; B=[]; F=[]; 
+	for i=1:N
+		Ci=max( Q(1,1)*t(1,2)+(i-1)*s(1,1)+t(1,1)*sum(Q(1,1:i)), (i-1)*s(1,2)+t(1,2)*sum(Q(1,1:i))+Q(1,i)*t(1,1) );
+		Bi=d-Ci;
+		Fi=(d-Bi)*Q(1,i);
+		C=[C Ci];
+		B=[B Bi];
+		F=[F Fi];
+	end
+	F;
+	if Fj<0
+		Fa=M;
+	else
+		Fa=sum(F);
+	end
+	Fa;
+	if w==1
+		FW=F;
+		FW=Fa;
+		FaW=Fa;
+		QW=n;
+		NW=w;
+		BW=B;
+		CW=C;
+	else
+		if Fa<FaW
+
+			FW=F;
+			FW=F;
+			FaW=Fa;
+			QW=Q;
+			NW=w;
+			BW=Bx;
+			CW=C;	
+			N=w;		
+		else
+
+			F=FW;
+			Fa=FaW;
+			Q=QW;
+			N=NW;
+			B=BW;
+			C=CW;
+			N=w-1;
+			break;
+		end
+	end
+w	;
+end
+
+
+Q;
+Bx=[];
+Bjm=[];
+Fj=d;
+for i=1:2
+  	k=m+1-i	;	%ukuran batch dengan asterik terbanyak dijadwalkan dekat due date
+
+  	for j=1:N
+		Q=Q;
+      		if k==2 
+         		t(1,k);
+			s(1,k);
+			A=t(1,k)*Q(1,j);
+         		Bj=Fj-A;
+         		Fj=Bj-s(1,k) ;
+      		else
+         		if j==1
+				Bijx=Bx(1,j);
+            			Bj=Bx(1,j)-t(1,k)*Q(1,j);
+         		else
+				Bijx=Bx(1,j);
+				Fjx=Fj;
+				Qijx=Q(1,j);
+				tijk=t(1,1);
+            			Bj=min(Bx(1,j),Fj)-t(1,1)*Q(1,j);
+         		end
+         		Fj=Bj-s(1,k) ;
+      		end  
+		Bjm=[Bjm Bj];
+  	end
+  	Bx=[Bjm; Bx];
+  	Bjm=[];
+end  
+Bx;
+Q;
+
+Fax=[];
+for i=1:N
+    	Fx=(d-Bx(1,i))*Q(1,i);
+    	Fax=[Fax Fx];
+end
+Fax;				%aktual flow time perbatch
+if Fj<0
+	TFax=M;
+else
+	TFax=sum(Fax);		%total aktual flow time
+end
+
+
+
+
+
+%disp('==============================================================')	;
+K;
+N;
+Qrin=Q;
+C;
+BR=BW;
+F=FW;
+Fa=sum(F);
